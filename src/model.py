@@ -1,13 +1,28 @@
 import torch
 from transformers import EsmModel, EsmTokenizer
 
-# Maps a friendly name to HuggingFace model ID and its hidden dimension.
-# Small is the default — fast on CPU, good for development and tests.
-# Swap to "large" for production-quality embeddings without changing call sites.
 MODEL_REGISTRY = {
-    "small":  ("facebook/esm2_t6_8M_UR50D",    320),   # 6 layers,  8M params
-    "medium": ("facebook/esm2_t12_35M_UR50D",   480),   # 12 layers, 35M params
-    "large":  ("facebook/esm2_t33_650M_UR50D", 1280),   # 33 layers, 650M params
+    "small": {
+        "hf_model_id":   "facebook/esm2_t6_8M_UR50D",
+        "parameters":    "8M",
+        "layers":        6,
+        "embedding_dim": 320,
+        "description":   "Fast CPU inference. Good for development and high-throughput screening.",
+    },
+    "medium": {
+        "hf_model_id":   "facebook/esm2_t12_35M_UR50D",
+        "parameters":    "35M",
+        "layers":        12,
+        "embedding_dim": 480,
+        "description":   "Balanced accuracy and speed. Suitable for production workloads.",
+    },
+    "large": {
+        "hf_model_id":   "facebook/esm2_t33_650M_UR50D",
+        "parameters":    "650M",
+        "layers":        33,
+        "embedding_dim": 1280,
+        "description":   "Highest quality embeddings. Recommended for precision annotation tasks.",
+    },
 }
 
 # Standard 20 amino acids + ambiguous codes ESM2 handles gracefully.
@@ -20,8 +35,11 @@ class ESM2Model:
         if model_size not in MODEL_REGISTRY:
             raise ValueError(f"model_size must be one of {list(MODEL_REGISTRY)}, got '{model_size}'")
 
-        model_id, self.hidden_dim = MODEL_REGISTRY[model_size]
+        config = MODEL_REGISTRY[model_size]
+        self.model_size = model_size
+        self.hidden_dim = config["embedding_dim"]
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        model_id = config["hf_model_id"]
 
         self.tokenizer = EsmTokenizer.from_pretrained(model_id)
         self.model = EsmModel.from_pretrained(model_id, add_pooling_layer=False).to(self.device)

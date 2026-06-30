@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, field_validator
 
 from src.inference import InferenceEngine
-from src.model import VALID_AA, MAX_SEQUENCE_LENGTH
+from src.model import VALID_AA, MAX_SEQUENCE_LENGTH, MODEL_REGISTRY
 from src.reference import build_reference_embeddings
 from src.search import ProteinSearchIndex
 from src.pipeline import aggregate_go_terms
@@ -160,7 +160,21 @@ async def health():
         "status": "ok",
         "model_loaded": engine is not None,
         "index_ready": search_index is not None,
+        "active_model": engine.model.model_size if engine else None,
     }
+
+
+@app.get("/models")
+async def list_models():
+    active = engine.model.model_size if engine else None
+    return [
+        {
+            "id": model_id,
+            "active": model_id == active,
+            **config,
+        }
+        for model_id, config in MODEL_REGISTRY.items()
+    ]
 
 
 @app.post("/embed", response_model=EmbedResponse)

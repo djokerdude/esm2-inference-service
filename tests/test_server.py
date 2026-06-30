@@ -19,6 +19,41 @@ def test_health_ok(client):
     assert body["status"] == "ok"
     assert body["model_loaded"] is True
     assert body["index_ready"] is True
+    assert body["active_model"] == "small"
+
+
+# ---------------------------------------------------------------------------
+# GET /models
+# ---------------------------------------------------------------------------
+
+def test_models_returns_all_three(client):
+    r = client.get("/models")
+    assert r.status_code == 200
+    ids = [m["id"] for m in r.json()]
+    assert ids == ["small", "medium", "large"]
+
+
+def test_models_small_is_active(client):
+    r = client.get("/models")
+    models = {m["id"]: m for m in r.json()}
+    assert models["small"]["active"] is True
+    assert models["medium"]["active"] is False
+    assert models["large"]["active"] is False
+
+
+def test_models_contain_required_fields(client):
+    r = client.get("/models")
+    for model in r.json():
+        for field in ("id", "active", "hf_model_id", "parameters", "layers", "embedding_dim", "description"):
+            assert field in model, f"missing field '{field}' in model {model['id']}"
+
+
+def test_models_embedding_dims_are_correct(client):
+    r = client.get("/models")
+    dims = {m["id"]: m["embedding_dim"] for m in r.json()}
+    assert dims["small"]  == 320
+    assert dims["medium"] == 480
+    assert dims["large"]  == 1280
 
 
 # ---------------------------------------------------------------------------
