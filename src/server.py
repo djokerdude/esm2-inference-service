@@ -1,4 +1,5 @@
 import asyncio
+import time
 from contextlib import asynccontextmanager
 from functools import partial
 
@@ -9,6 +10,7 @@ from src.inference import InferenceEngine
 from src.model import VALID_AA, MAX_SEQUENCE_LENGTH
 from src.reference import build_reference_embeddings
 from src.search import ProteinSearchIndex
+from src.pipeline import aggregate_go_terms
 
 # ---------------------------------------------------------------------------
 # Shared state — loaded once at startup, reused across all requests.
@@ -116,6 +118,38 @@ class SearchResponse(BaseModel):
     results: list[dict]
 
 
+class AnnotateRequest(BaseModel):
+    sequence: str
+    k: int = 5
+
+    @field_validator("sequence")
+    @classmethod
+    def validate_sequence(cls, v: str) -> str:
+        v = v.upper().strip()
+        if not v:
+            raise ValueError("sequence must not be empty")
+        if len(v) > MAX_SEQUENCE_LENGTH:
+            raise ValueError(f"sequence length {len(v)} exceeds maximum {MAX_SEQUENCE_LENGTH}")
+        invalid = set(v) - VALID_AA
+        if invalid:
+            raise ValueError(f"invalid amino acid characters: {sorted(invalid)}")
+        return v
+
+    @field_validator("k")
+    @classmethod
+    def validate_k(cls, v: int) -> int:
+        if not 1 <= v <= 20:
+            raise ValueError("k must be between 1 and 20")
+        return v
+
+
+class AnnotateResponse(BaseModel):
+    query_length: int
+    predicted_go_terms: list[dict]
+    nearest_neighbors: list[dict]
+    inference_time_ms: float
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -172,3 +206,28 @@ async def search(request: SearchRequest):
 
     results = search_index.query(embeddings[0], k=request.k)
     return SearchResponse(query_length=len(request.sequence), results=results)
+
+
+@app.post("/pipeline/annotate", response_model=AnnotateResponse)
+async def annotate(request: AnnotateRequest):
+    loop = asyncio.get_running_loop()
+    t0 = time.perf_counter()
+
+    try:
+        embeddings = await loop.run_in_executor(
+            None, partial(engine.embed, [request.sequence])
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    neighbors = search_index.query(embeddings[0], k=request.k)
+    predicted_go_terms = aggregate_go_terms(neighbors)
+
+    inference_time_ms = round((time.perf_counter() - t0) * 1000, 2)
+
+    return AnnotateResponse(
+        query_length=len(request.sequence),
+        predicted_go_terms=predicted_go_terms,
+        nearest_neighbors=neighbors,
+        inference_time_ms=inference_time_ms,
+    )
