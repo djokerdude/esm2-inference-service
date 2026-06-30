@@ -1,6 +1,14 @@
 # ESM2 Inference Service
 
-A production-ready protein sequence embedding, similarity search, and functional annotation API built on Meta's [ESM2](https://github.com/facebookresearch/esm) protein language model.
+A production-ready protein sequence embedding, similarity search, and functional annotation service — UI and API — built on Meta's [ESM2](https://github.com/facebookresearch/esm) protein language model.
+
+---
+
+## Interface
+
+![ESM2 Protein Annotation UI](docs/ui_screenshot.png)
+
+Submit any amino acid sequence and get back nearest-neighbor proteins ranked by embedding similarity, predicted Gene Ontology terms weighted by confidence, and end-to-end inference latency — all in under 20ms on CPU. The UI is served directly from the FastAPI backend at `GET /`; no separate frontend server required.
 
 ---
 
@@ -163,6 +171,10 @@ python3 -m uvicorn src.server:app --reload
 ```
 
 Startup takes ~10 seconds on first run: ESM2 downloads (~30MB), embeds 12 reference proteins, and builds the FAISS index. Subsequent starts use the cached model weights.
+
+**Open the UI**
+
+Navigate to `http://localhost:8000` — the annotation interface loads automatically. Use the example buttons to try hemoglobin, alpha-synuclein, ubiquitin, or insulin fragments, or paste any amino acid sequence directly.
 
 **Run the test suite**
 ```bash
