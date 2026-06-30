@@ -7,27 +7,32 @@ from pydantic import BaseModel, field_validator
 
 from src.inference import InferenceEngine
 from src.model import VALID_AA, MAX_SEQUENCE_LENGTH
+from src.reference import build_reference_embeddings
+from src.search import ProteinSearchIndex
 
 # ---------------------------------------------------------------------------
-# Shared engine — loaded once at startup, reused across all requests.
-# Avoids paying the model-load cost (several seconds) on every request.
+# Shared state — loaded once at startup, reused across all requests.
 # ---------------------------------------------------------------------------
 
 engine: InferenceEngine | None = None
+search_index: ProteinSearchIndex | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global engine
+    global engine, search_index
     engine = InferenceEngine(model_size="small")
+    embeddings, proteins = build_reference_embeddings(engine)
+    search_index = ProteinSearchIndex(embeddings, proteins)
     yield
     engine = None
+    search_index = None
 
 
 app = FastAPI(
     title="ESM2 Inference Service",
-    description="Protein sequence embedding via Meta's ESM2 language model.",
-    version="0.1.0",
+    description="Protein sequence embedding and nearest-neighbor search via Meta's ESM2.",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -81,21 +86,53 @@ class BatchEmbedResponse(BaseModel):
     model: str = "small"
 
 
+class SearchRequest(BaseModel):
+    sequence: str
+    k: int = 5
+
+    @field_validator("sequence")
+    @classmethod
+    def validate_sequence(cls, v: str) -> str:
+        v = v.upper().strip()
+        if not v:
+            raise ValueError("sequence must not be empty")
+        if len(v) > MAX_SEQUENCE_LENGTH:
+            raise ValueError(f"sequence length {len(v)} exceeds maximum {MAX_SEQUENCE_LENGTH}")
+        invalid = set(v) - VALID_AA
+        if invalid:
+            raise ValueError(f"invalid amino acid characters: {sorted(invalid)}")
+        return v
+
+    @field_validator("k")
+    @classmethod
+    def validate_k(cls, v: int) -> int:
+        if not 1 <= v <= 20:
+            raise ValueError("k must be between 1 and 20")
+        return v
+
+
+class SearchResponse(BaseModel):
+    query_length: int
+    results: list[dict]
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model_loaded": engine is not None}
+    return {
+        "status": "ok",
+        "model_loaded": engine is not None,
+        "index_ready": search_index is not None,
+    }
 
 
 @app.post("/embed", response_model=EmbedResponse)
 async def embed(request: EmbedRequest):
     loop = asyncio.get_running_loop()
     try:
-        # Run the CPU/GPU-bound forward pass in a thread pool so the async
-        # event loop stays free to accept other requests during inference.
         embeddings = await loop.run_in_executor(
             None, partial(engine.embed, [request.sequence], request.layer)
         )
@@ -121,3 +158,17 @@ async def embed_batch(request: BatchEmbedRequest):
         count=len(embeddings),
         dim=len(embeddings[0]),
     )
+
+
+@app.post("/search", response_model=SearchResponse)
+async def search(request: SearchRequest):
+    loop = asyncio.get_running_loop()
+    try:
+        embeddings = await loop.run_in_executor(
+            None, partial(engine.embed, [request.sequence])
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    results = search_index.query(embeddings[0], k=request.k)
+    return SearchResponse(query_length=len(request.sequence), results=results)

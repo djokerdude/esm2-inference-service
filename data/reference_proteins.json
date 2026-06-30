@@ -1,0 +1,174 @@
+[
+  {
+    "uniprot_id": "P0CG47",
+    "name": "Ubiquitin",
+    "gene": "UBB",
+    "organism": "Homo sapiens",
+    "sequence": "MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG",
+    "function": "Tags proteins for proteasomal degradation; also regulates DNA repair, cell cycle, and endocytosis.",
+    "go_terms": [
+      {"id": "GO:0000209", "name": "protein polyubiquitination", "category": "biological_process"},
+      {"id": "GO:0016567", "name": "protein monoubiquitination", "category": "biological_process"},
+      {"id": "GO:0031146", "name": "SCF-dependent proteasomal ubiquitin-dependent protein catabolic process", "category": "biological_process"},
+      {"id": "GO:0005737", "name": "cytoplasm", "category": "cellular_component"},
+      {"id": "GO:0005634", "name": "nucleus", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P99999",
+    "name": "Cytochrome c",
+    "gene": "CYCS",
+    "organism": "Homo sapiens",
+    "sequence": "MGDVEKGKKIFIMKCSQCHTVEKGGKHKTGPNLHGLFGRKTGQAPGYSYTAANKNKGIIWGEDTLMEYLENPKKYIPGTKMIFVGIKKKEERADLIAYLKKATNE",
+    "function": "Electron carrier in the mitochondrial respiratory chain; released into cytoplasm to trigger apoptosis.",
+    "go_terms": [
+      {"id": "GO:0006123", "name": "mitochondrial electron transport, cytochrome c to oxygen", "category": "biological_process"},
+      {"id": "GO:0006915", "name": "apoptotic process", "category": "biological_process"},
+      {"id": "GO:0004129", "name": "cytochrome-c oxidase activity", "category": "molecular_function"},
+      {"id": "GO:0005743", "name": "mitochondrial inner membrane", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P69905",
+    "name": "Hemoglobin subunit alpha",
+    "gene": "HBA1",
+    "organism": "Homo sapiens",
+    "sequence": "MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHASLDKFLASVSTVLTSKYR",
+    "function": "Oxygen-carrying subunit of adult hemoglobin; pairs with beta subunit to form the functional tetramer.",
+    "go_terms": [
+      {"id": "GO:0020037", "name": "heme binding", "category": "molecular_function"},
+      {"id": "GO:0005344", "name": "oxygen carrier activity", "category": "molecular_function"},
+      {"id": "GO:0015671", "name": "oxygen transport", "category": "biological_process"},
+      {"id": "GO:0005833", "name": "hemoglobin complex", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P68871",
+    "name": "Hemoglobin subunit beta",
+    "gene": "HBB",
+    "organism": "Homo sapiens",
+    "sequence": "MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH",
+    "function": "Oxygen-carrying subunit of adult hemoglobin; E6V mutation causes sickle cell anemia.",
+    "go_terms": [
+      {"id": "GO:0020037", "name": "heme binding", "category": "molecular_function"},
+      {"id": "GO:0005344", "name": "oxygen carrier activity", "category": "molecular_function"},
+      {"id": "GO:0015671", "name": "oxygen transport", "category": "biological_process"},
+      {"id": "GO:0005833", "name": "hemoglobin complex", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P02144",
+    "name": "Myoglobin",
+    "gene": "MB",
+    "organism": "Homo sapiens",
+    "sequence": "MGLSDGEWQLVLNVWGKVEADIPGHGQEVLIRLFKGHPETLEKFDKFKHLKSEDEMKASEDLKKHGATVLTALGGILKKKGHHEAEIKPLAQSHATKHKIPVKYLEFISECIIQVLQSKHPGDFGADAQGAMNKALELFRKDIAAKYKELGYQG",
+    "function": "Intracellular oxygen storage in muscle tissue; facilitates oxygen diffusion to mitochondria.",
+    "go_terms": [
+      {"id": "GO:0020037", "name": "heme binding", "category": "molecular_function"},
+      {"id": "GO:0019825", "name": "oxygen binding", "category": "molecular_function"},
+      {"id": "GO:0005779", "name": "integral component of peroxisomal membrane", "category": "cellular_component"},
+      {"id": "GO:0015671", "name": "oxygen transport", "category": "biological_process"}
+    ]
+  },
+  {
+    "uniprot_id": "P0DP23",
+    "name": "Calmodulin-1",
+    "gene": "CALM1",
+    "organism": "Homo sapiens",
+    "sequence": "MADQLTEEQIAEFKEAFSLFDKDGDGTITTKELGTVMRSLGQNPTEAELQDMINEVDADGNGTIDFPEFLTMMARKMKDTDSEEEIREAFRVFDKDGNGYISAAELRHVMTNLGEKLTDEEVDEMIREADIDGDGQVNYEEFVQMMTAK",
+    "function": "Calcium sensor that transduces Ca2+ signals to downstream effectors including kinases, phosphatases, and ion channels.",
+    "go_terms": [
+      {"id": "GO:0005509", "name": "calcium ion binding", "category": "molecular_function"},
+      {"id": "GO:0048306", "name": "calcium-dependent protein binding", "category": "molecular_function"},
+      {"id": "GO:0007204", "name": "positive regulation of cytosolic calcium ion concentration", "category": "biological_process"},
+      {"id": "GO:0005737", "name": "cytoplasm", "category": "cellular_component"},
+      {"id": "GO:0005634", "name": "nucleus", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P37840",
+    "name": "Alpha-synuclein",
+    "gene": "SNCA",
+    "organism": "Homo sapiens",
+    "sequence": "MDVFMKGLSKAKEGVVAAAEKTKQGVAEAAGKTKEGVLYVGSKTKEGVVHGVATVAEKTKEQVTNVGGAVVTGVTAVAQKTVEGAGSIAAATGFVKKDQLGKNEEGAPQEGILEDMPVDPDNEAYEMPSEEGYQDYEPEA",
+    "function": "Synaptic vesicle trafficking regulator; aggregates into Lewy bodies in Parkinson's disease.",
+    "go_terms": [
+      {"id": "GO:0004016", "name": "adenylate cyclase activity", "category": "molecular_function"},
+      {"id": "GO:0099502", "name": "calcium ion-regulated exocytosis of neurotransmitter", "category": "biological_process"},
+      {"id": "GO:0051788", "name": "response to misfolded protein", "category": "biological_process"},
+      {"id": "GO:0043025", "name": "neuronal cell body", "category": "cellular_component"},
+      {"id": "GO:0008021", "name": "synaptic vesicle", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P00441",
+    "name": "Superoxide dismutase (Cu-Zn)",
+    "gene": "SOD1",
+    "organism": "Homo sapiens",
+    "sequence": "MATKAVCVLKGDGPVQGIINFEQKESNGPVKVWGSIKGLTEGLHGFHVHEFGDNTAGCTSAGPHFNPLSRKHGGPKDEERHVGDLGNVTADKDGVADVSIEDSVISLSGDHCIIGRTLVVHEKADDLGKGGNEESTKTGNAGSRLACGVIGIAQ",
+    "function": "Converts superoxide radicals to H2O2; mutations cause ~20% of familial ALS cases.",
+    "go_terms": [
+      {"id": "GO:0004784", "name": "superoxide dismutase activity", "category": "molecular_function"},
+      {"id": "GO:0006801", "name": "superoxide metabolic process", "category": "biological_process"},
+      {"id": "GO:0034599", "name": "cellular response to oxidative stress", "category": "biological_process"},
+      {"id": "GO:0005737", "name": "cytoplasm", "category": "cellular_component"},
+      {"id": "GO:0005829", "name": "cytosol", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P42212",
+    "name": "Green fluorescent protein",
+    "gene": "GFP",
+    "organism": "Aequorea victoria",
+    "sequence": "MSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLTYGVQCFSRYPDHMKQHDFFKSAMPEGYVQERTIFFKDDGNYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNYNSHNVYIMADKQKNGIKVNFKIRHNIEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSALSKDPNEKRDHMVLLEFVTAAGITLGMDELYK",
+    "function": "Bioluminescent reporter protein; forms an internal chromophore from Ser65-Tyr66-Gly67 via autocatalytic cyclization.",
+    "go_terms": [
+      {"id": "GO:0008218", "name": "bioluminescence", "category": "biological_process"},
+      {"id": "GO:0006091", "name": "generation of precursor metabolites and energy", "category": "biological_process"},
+      {"id": "GO:0047134", "name": "protein-disulfide reductase activity", "category": "molecular_function"}
+    ]
+  },
+  {
+    "uniprot_id": "P01308",
+    "name": "Insulin",
+    "gene": "INS",
+    "organism": "Homo sapiens",
+    "sequence": "MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQVELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN",
+    "function": "Regulates blood glucose by promoting cellular uptake of glucose; deficiency or resistance causes diabetes mellitus.",
+    "go_terms": [
+      {"id": "GO:0005179", "name": "hormone activity", "category": "molecular_function"},
+      {"id": "GO:0008188", "name": "neuropeptide receptor binding", "category": "molecular_function"},
+      {"id": "GO:0001678", "name": "cellular glucose homeostasis", "category": "biological_process"},
+      {"id": "GO:0005615", "name": "extracellular space", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P10599",
+    "name": "Thioredoxin",
+    "gene": "TXN",
+    "organism": "Homo sapiens",
+    "sequence": "MVKQIESKTAFQEALDAAGDKLVVVDFSATWCGPCRMIAPILDEIADEYQGKLTVAKLNIDQNPGTAPKYGIRGIPTLLLFKNGEVAATKVGALSKGQLKEFLDANLA",
+    "function": "Redox enzyme that reduces disulfide bonds; protects cells from oxidative stress and regulates apoptosis.",
+    "go_terms": [
+      {"id": "GO:0015035", "name": "protein disulfide oxidoreductase activity", "category": "molecular_function"},
+      {"id": "GO:0045454", "name": "cell redox homeostasis", "category": "biological_process"},
+      {"id": "GO:0043066", "name": "negative regulation of apoptotic process", "category": "biological_process"},
+      {"id": "GO:0005737", "name": "cytoplasm", "category": "cellular_component"}
+    ]
+  },
+  {
+    "uniprot_id": "P12004",
+    "name": "Proliferating cell nuclear antigen",
+    "gene": "PCNA",
+    "organism": "Homo sapiens",
+    "sequence": "MFEARLVQGSILKKVLEALKDLINEACWDISSSGVNLQSMDSSHVSLVQLTLRSEGFDTYRCDRNLAMGDNLTSMSIFVKKIINKMFQKKAPVCRKNSSFDLSAFLNLSSELAFKRSTSIHAVGAASISHVAHVQAAIKAGVDTSEKPCNKIADKLNSLDELRSAFAGAVVNDNGRILVGQILSKLGISNKQFEELTPVHGQKAMVKSITLPQNLNKFNREAFKIISKPNIEVRGFHSVVKPEDAIPEEAGIKTTVGANLVNLKALQEKLDNLQKDVSEGKDFSSEVEIFKKINKNLPENDAIPKKVMKKLNKKLKGK",
+    "function": "DNA sliding clamp; acts as a processivity factor for DNA polymerase delta during replication and repair.",
+    "go_terms": [
+      {"id": "GO:0003689", "name": "DNA clamp loader activity", "category": "molecular_function"},
+      {"id": "GO:0006260", "name": "DNA replication", "category": "biological_process"},
+      {"id": "GO:0006281", "name": "DNA repair", "category": "biological_process"},
+      {"id": "GO:0005634", "name": "nucleus", "category": "cellular_component"},
+      {"id": "GO:0042555", "name": "MCM complex", "category": "cellular_component"}
+    ]
+  }
+]
