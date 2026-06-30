@@ -24,7 +24,7 @@ class ESM2Model:
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         self.tokenizer = EsmTokenizer.from_pretrained(model_id)
-        self.model = EsmModel.from_pretrained(model_id).to(self.device)
+        self.model = EsmModel.from_pretrained(model_id, add_pooling_layer=False).to(self.device)
         self.model.eval()
 
     def tokenize(self, sequences: list[str]) -> dict:
