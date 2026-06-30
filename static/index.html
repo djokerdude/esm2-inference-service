@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESM2 Protein Annotation</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --border:    #2a2d3a;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --accent:    #38bdf8;
+      --green:     #34d399;
+      --amber:     #fbbf24;
+      --purple:    #a78bfa;
+      --red:       #f87171;
+      --radius:    8px;
+      --mono:      "JetBrains Mono", "Fira Code", monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* ── Header ── */
+    header { margin-bottom: 2rem; }
+
+    .header-row {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+
+    h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+
+    .model-badge {
+      font-size: 0.72rem;
+      font-family: var(--mono);
+      background: #0c2a3a;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 0.2rem 0.7rem;
+    }
+
+    .subtitle { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+
+    /* ── Input card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 0.4rem; }
+
+    textarea {
+      width: 100%;
+      height: 90px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      padding: 0.65rem 0.8rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    textarea:focus { border-color: var(--accent); }
+
+    .examples {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.6rem;
+    }
+
+    .example-btn {
+      font-size: 0.72rem;
+      font-family: var(--mono);
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 0.25rem 0.6rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .example-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .k-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .k-control input {
+      width: 52px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      padding: 0.3rem 0.5rem;
+      outline: none;
+      text-align: center;
+    }
+
+    .submit-btn {
+      background: var(--accent);
+      color: #0f1117;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0.55rem 1.4rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-left: auto;
+    }
+    .submit-btn:hover { opacity: 0.85; }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Results ── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .results-header h2 { font-size: 1rem; font-weight: 600; }
+
+    .meta-chips { display: flex; gap: 0.5rem; }
+
+    .chip {
+      font-size: 0.72rem;
+      font-family: var(--mono);
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid;
+    }
+    .chip-time  { color: var(--green);  border-color: var(--green);  background: #052e1a; }
+    .chip-len   { color: var(--muted);  border-color: var(--border); background: transparent; }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 640px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    /* Neighbor row */
+    .neighbor {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .neighbor:last-child { border-bottom: none; }
+
+    .neighbor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.2rem;
+    }
+
+    .neighbor-name { font-size: 0.875rem; font-weight: 600; }
+    .neighbor-org  { font-size: 0.72rem; color: var(--muted); }
+
+    .similarity-score {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .bar-track {
+      height: 3px;
+      background: var(--border);
+      border-radius: 999px;
+      margin: 0.35rem 0;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .neighbor-fn {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* GO term row */
+    .go-term {
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .go-term:last-child { border-bottom: none; }
+
+    .go-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .go-name { font-size: 0.82rem; flex: 1; line-height: 1.3; }
+
+    .confidence {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .go-meta { display: flex; align-items: center; gap: 0.5rem; }
+
+    .go-id {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .category-pill {
+      font-size: 0.6rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .bp { background: #1e3a5f; color: #7dd3fc; }
+    .mf { background: #1a3a1a; color: #86efac; }
+    .cc { background: #3a1a2e; color: #d8b4fe; }
+
+    /* States */
+    .hidden { display: none; }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 0.75rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: #2a1515;
+      border: 1px solid var(--red);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      color: var(--red);
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-row">
+      <h1>ESM2 Protein Annotation</h1>
+      <span class="model-badge" id="model-badge">loading model…</span>
+    </div>
+    <p class="subtitle">
+      Submit an amino acid sequence to find evolutionarily similar proteins and predict
+      function via Gene Ontology terms — zero-shot, from geometry alone.
+    </p>
+  </header>
+
+  <div class="card">
+    <label for="seq-input">Amino acid sequence</label>
+    <textarea
+      id="seq-input"
+      spellcheck="false"
+      placeholder="MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPT…"
+    ></textarea>
+
+    <div class="examples">
+      <span style="font-size:0.72rem;color:var(--muted);align-self:center;">Try:</span>
+      <button class="example-btn" data-seq="MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPT">Hb alpha</button>
+      <button class="example-btn" data-seq="MDVFMKGLSKAKEGVVAAAEKTKQGVAEAAGKTKEGVL">α-synuclein</button>
+      <button class="example-btn" data-seq="MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG">Ubiquitin</button>
+      <button class="example-btn" data-seq="MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGER">Insulin</button>
+    </div>
+
+    <div class="controls">
+      <div class="k-control">
+        <label for="k-input" style="margin:0">Neighbors (k)</label>
+        <input id="k-input" type="number" value="5" min="1" max="10" />
+      </div>
+      <button class="submit-btn" id="submit-btn" onclick="annotate()">Annotate →</button>
+    </div>
+  </div>
+
+  <div id="error-box" class="error-box hidden"></div>
+
+  <div id="loading" class="loading hidden">
+    <div class="spinner"></div><br>Running ESM2 forward pass…
+  </div>
+
+  <div id="results" class="hidden">
+    <div class="results-header">
+      <h2>Results</h2>
+      <div class="meta-chips">
+        <span class="chip chip-len" id="chip-len"></span>
+        <span class="chip chip-time" id="chip-time"></span>
+      </div>
+    </div>
+
+    <div class="results-grid">
+      <div class="card" style="margin:0">
+        <div class="section-title">Nearest Neighbors</div>
+        <div id="neighbors-list"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="section-title">Predicted GO Terms</div>
+        <div id="go-list"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Load active model on page load ──────────────────────────────────
+  fetch("/models")
+    .then(r => r.json())
+    .then(models => {
+      const active = models.find(m => m.active);
+      if (active) {
+        document.getElementById("model-badge").textContent =
+          `esm2 · ${active.parameters} · ${active.embedding_dim}d`;
+      }
+    })
+    .catch(() => {
+      document.getElementById("model-badge").textContent = "model info unavailable";
+    });
+
+  // ── Example sequence buttons ─────────────────────────────────────────
+  document.querySelectorAll(".example-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("seq-input").value = btn.dataset.seq;
+    });
+  });
+
+  // ── Category label helper ────────────────────────────────────────────
+  function categoryPill(cat) {
+    const map = {
+      biological_process: ["bp", "BP"],
+      molecular_function: ["mf", "MF"],
+      cellular_component: ["cc", "CC"],
+    };
+    const [cls, label] = map[cat] || ["", cat];
+    return `<span class="category-pill ${cls}">${label}</span>`;
+  }
+
+  // ── Annotate ─────────────────────────────────────────────────────────
+  async function annotate() {
+    const sequence = document.getElementById("seq-input").value.trim().toUpperCase();
+    const k        = parseInt(document.getElementById("k-input").value, 10);
+    const btn      = document.getElementById("submit-btn");
+
+    // Reset UI
+    document.getElementById("results").classList.add("hidden");
+    document.getElementById("error-box").classList.add("hidden");
+    document.getElementById("loading").classList.remove("hidden");
+    btn.disabled = true;
+
+    try {
+      const res = await fetch("/pipeline/annotate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequence, k }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail?.[0]?.msg ?? err.detail ?? "Request failed");
+      }
+
+      const data = await res.json();
+      renderResults(data);
+
+    } catch (err) {
+      const box = document.getElementById("error-box");
+      box.textContent = `Error: ${err.message}`;
+      box.classList.remove("hidden");
+    } finally {
+      document.getElementById("loading").classList.add("hidden");
+      btn.disabled = false;
+    }
+  }
+
+  // ── Render results ───────────────────────────────────────────────────
+  function renderResults(data) {
+    document.getElementById("chip-len").textContent  = `${data.query_length} aa`;
+    document.getElementById("chip-time").textContent = `${data.inference_time_ms} ms`;
+
+    // Neighbors
+    const neighborEl = document.getElementById("neighbors-list");
+    neighborEl.innerHTML = data.nearest_neighbors.map(n => `
+      <div class="neighbor">
+        <div class="neighbor-header">
+          <div>
+            <span class="neighbor-name">${n.name}</span>
+            <div class="neighbor-org">${n.organism} · ${n.uniprot_id}</div>
+          </div>
+          <span class="similarity-score">${n.similarity.toFixed(3)}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${(n.similarity * 100).toFixed(1)}%"></div>
+        </div>
+        <div class="neighbor-fn">${n.function}</div>
+      </div>
+    `).join("");
+
+    // GO terms
+    const goEl = document.getElementById("go-list");
+    goEl.innerHTML = data.predicted_go_terms.map(t => `
+      <div class="go-term">
+        <div class="go-header">
+          <span class="go-name">${t.name}</span>
+          <span class="confidence" style="color:${confidenceColor(t.confidence)}">
+            ${(t.confidence * 100).toFixed(0)}%
+          </span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${(t.confidence*100).toFixed(1)}%;background:${confidenceColor(t.confidence)}"></div>
+        </div>
+        <div class="go-meta">
+          <span class="go-id">${t.id}</span>
+          ${categoryPill(t.category)}
+        </div>
+      </div>
+    `).join("");
+
+    document.getElementById("results").classList.remove("hidden");
+  }
+
+  function confidenceColor(c) {
+    if (c >= 0.8) return "var(--green)";
+    if (c >= 0.5) return "var(--amber)";
+    return "var(--muted)";
+  }
+</script>
+</body>
+</html>

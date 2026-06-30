@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "esm2-server",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "uvicorn", "src.server:app", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}

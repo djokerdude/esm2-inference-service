@@ -4,6 +4,9 @@ from contextlib import asynccontextmanager
 from functools import partial
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from pydantic import BaseModel, field_validator
 
 from src.inference import InferenceEngine
@@ -32,12 +35,21 @@ async def lifespan(app: FastAPI):
     search_index = None
 
 
+_STATIC = Path(__file__).parent.parent / "static"
+
 app = FastAPI(
     title="ESM2 Inference Service",
     description="Protein sequence embedding and nearest-neighbor search via Meta's ESM2.",
     version="0.2.0",
     lifespan=lifespan,
 )
+
+app.mount("/static", StaticFiles(directory=_STATIC), name="static")
+
+
+@app.get("/", include_in_schema=False)
+async def ui():
+    return FileResponse(_STATIC / "index.html")
 
 
 # ---------------------------------------------------------------------------
