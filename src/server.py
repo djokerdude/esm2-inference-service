@@ -3,7 +3,7 @@ import time
 from contextlib import asynccontextmanager
 from functools import partial
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel, field_validator
 
 from src.inference import InferenceEngine
@@ -11,6 +11,7 @@ from src.model import VALID_AA, MAX_SEQUENCE_LENGTH, MODEL_REGISTRY
 from src.reference import build_reference_embeddings
 from src.search import ProteinSearchIndex
 from src.pipeline import aggregate_go_terms
+from src.jobs import create_job, get_job, run_embed_job, run_annotate_job
 
 # ---------------------------------------------------------------------------
 # Shared state — loaded once at startup, reused across all requests.
@@ -245,3 +246,47 @@ async def annotate(request: AnnotateRequest):
         nearest_neighbors=neighbors,
         inference_time_ms=inference_time_ms,
     )
+
+
+# ---------------------------------------------------------------------------
+# Async job endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/jobs/embed", status_code=202)
+async def submit_embed_job(request: BatchEmbedRequest, background_tasks: BackgroundTasks):
+    job = create_job("embed")
+    background_tasks.add_task(
+        run_embed_job, job.job_id, request.sequences, request.layer, engine
+    )
+    return {"job_id": job.job_id, "status": job.status}
+
+
+@app.post("/jobs/annotate", status_code=202)
+async def submit_annotate_job(request: AnnotateRequest, background_tasks: BackgroundTasks):
+    job = create_job("annotate")
+    background_tasks.add_task(
+        run_annotate_job, job.job_id, request.sequence, request.k, engine, search_index
+    )
+    return {"job_id": job.job_id, "status": job.status}
+
+
+@app.get("/jobs/{job_id}")
+async def poll_job(job_id: str):
+    job = get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"job '{job_id}' not found")
+
+    response: dict = {
+        "job_id": job.job_id,
+        "type": job.type,
+        "status": job.status,
+        "created_at": job.created_at,
+        "completed_at": job.completed_at,
+        "duration_ms": job.duration_ms(),
+    }
+    if job.status == "complete":
+        response["result"] = job.result
+    elif job.status == "failed":
+        response["error"] = job.error
+
+    return response
