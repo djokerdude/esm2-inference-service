@@ -35,6 +35,7 @@ class ProteinSearchIndex:
         vec = np.array([embedding], dtype=np.float32)
         faiss.normalize_L2(vec)
 
+        k = min(k, self._index.ntotal)
         scores, indices = self._index.search(vec, k)
 
         results = []
