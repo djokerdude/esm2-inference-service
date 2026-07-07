@@ -1,6 +1,10 @@
 # ESM2 Inference Service
 
-A production-ready protein sequence embedding, similarity search, and functional annotation service — UI and API — built on Meta's [ESM2](https://github.com/facebookresearch/esm) protein language model.
+A working end-to-end protein annotation service — UI and REST API — built on Meta's [ESM2](https://github.com/facebookresearch/esm) protein language model. It embeds any amino-acid sequence, finds its nearest neighbors in a curated reference set, and predicts Gene Ontology terms **zero-shot** from embedding geometry alone.
+
+It was built to investigate one question: **if a protein language model is trained only on raw sequences — no labels, no ontology graphs — does it learn ontological structure implicitly?** This service is the experiment that answers it.
+
+> **Scope:** This is a focused proof of concept with a 12-protein curated reference set, run locally. It demonstrates a method; it is not a comprehensive annotator or a deployed system. See [Scope & Limitations](#scope--limitations) for exactly what it is and isn't.
 
 ---
 
@@ -8,28 +12,30 @@ A production-ready protein sequence embedding, similarity search, and functional
 
 ![ESM2 Protein Annotation UI](docs/ui_screenshot.png)
 
-Submit any amino acid sequence and get back nearest-neighbor proteins ranked by embedding similarity, predicted Gene Ontology terms weighted by confidence, and end-to-end inference latency — all in under 20ms on CPU. The UI is served directly from the FastAPI backend at `GET /`; no separate frontend server required.
+Submit any amino-acid sequence and get back nearest-neighbor proteins ranked by embedding similarity, predicted Gene Ontology terms weighted by neighbor confidence, and end-to-end inference latency. The UI is served directly from the FastAPI backend at `GET /`; no separate frontend server required.
+
+The frontend is intentionally framework-free (vanilla JS served as static files) to keep the service single-process and dependency-light — no build step, no bundler, no `node_modules`.
 
 ---
 
 ## Background & Motivation
 
-While taking an Intro to AI course, I encountered formal knowledge representation systems — ontologies like the Gene Ontology (GO), which organizes all known protein functions into a structured hierarchy built by biologists over decades:
+While taking an Intro to AI course, I encountered formal knowledge-representation systems — ontologies like the Gene Ontology (GO), which organizes all known protein functions into a structured hierarchy built by biologists over decades:
 
 ```
 molecular_function
- └── catalytic activity
-      └── transferase activity
-           └── kinase activity
-                └── tyrosine kinase activity
-                     └── EGFR
+└── catalytic activity
+    └── transferase activity
+        └── kinase activity
+            └── tyrosine kinase activity
+                └── EGFR
 ```
 
 This raised a question: **if a model is trained only on raw protein sequences — no labels, no ontology graphs — does it learn this structure implicitly?**
 
 ESM2 gave a clear answer. Trained by Meta on 250 million protein sequences with a single objective (predict masked amino acids), it learns to encode evolutionary relationships into a continuous geometric space. Proteins that share ancestry, structure, and function end up near each other in that space — not because anyone told it what "kinase" means, but because kinases evolved from a common ancestor and share detectable sequence patterns.
 
-This service is an exploration of that idea: **extracting implicit ontologies from learned embeddings**. Given any protein sequence, it embeds it into ESM2's learned space, finds its nearest neighbors in a curated reference database, and surfaces the Gene Ontology terms those neighbors carry — recovering structured biological knowledge from geometry alone.
+This service is an exploration of that idea: **extracting implicit ontologies from learned embeddings.** Given any protein sequence, it embeds it into ESM2's learned space, finds its nearest neighbors in a curated reference database, and surfaces the Gene Ontology terms those neighbors carry — recovering structured biological knowledge from geometry alone.
 
 ---
 
@@ -37,13 +43,26 @@ This service is an exploration of that idea: **extracting implicit ontologies fr
 
 A formal ontology encodes knowledge as explicit symbols and relationships. ESM2's embedding space encodes the same knowledge implicitly — as geometry:
 
-| Formal ontology concept | Embedding space equivalent |
-|---|---|
-| A concept (e.g. "kinase") | A cluster or linear subspace |
-| A relationship (e.g. "IS-A transferase") | A direction in the space |
-| An instance (e.g. EGFR) | An individual vector |
+| Formal ontology concept        | Embedding-space equivalent      |
+| ------------------------------ | -------------------------------- |
+| A concept (e.g. "kinase")      | A cluster or linear subspace    |
+| A relationship (e.g. "IS-A")   | A direction in the space        |
+| An instance (e.g. EGFR)        | An individual vector            |
 
-The result: querying a new, unknown protein against the embedding space is zero-shot functional annotation — no fine-tuning, no labels for the query, just geometry.
+The result: querying a new, unknown protein against the embedding space is **zero-shot functional annotation** — no fine-tuning, no labels for the query, just geometry.
+
+---
+
+## Scope & Limitations
+
+Stating these up front, because knowing the boundary between a proof of concept and a production system is part of the point.
+
+- **Reference set is 12 curated proteins.** Annotation quality is bounded by this set — a query only gets good GO terms if a relevant anchor is present. The 12 were not chosen arbitrarily: each was picked to test a specific hypothesis about the embedding space (do the three oxygen carriers cluster together? does a disordered protein with no defined fold sit apart? does a non-human beta-barrel fold stay distinct?). This is enough to demonstrate and validate the method, not to annotate arbitrary proteins.
+- **In-memory index and job store, single process.** No persistence, no auth, no horizontal scaling. Restarting the server rebuilds the index from scratch (~10s).
+- **Latency figures reflect the 12-vector index.** The ~15ms end-to-end time shows the *pipeline* isn't the bottleneck — it is not a production SLA. At 12 vectors the FAISS search is effectively free; the cost is the ESM2 forward pass.
+- **Async job pattern is demonstrated, not required at this scale.** For a 15ms operation it's unnecessary. It's implemented to show the pattern that *would* matter for large models (650M params) or large batches, where you don't want to block on the result.
+
+**What productionizing would require:** an IVF/HNSW FAISS index for a full-SwissProt (~570k) reference set, a persistent vector store and job queue, request auth, containerization, and monitoring. The architecture is deliberately structured so this is an extension of the reference set and index, not a rewrite.
 
 ---
 
@@ -92,7 +111,7 @@ flowchart LR
 
 ## Sample Output
 
-### `POST /pipeline/annotate` — hemoglobin alpha fragment
+**`POST /pipeline/annotate`** — hemoglobin alpha fragment
 
 ```bash
 curl -s -X POST http://localhost:8000/pipeline/annotate \
@@ -122,9 +141,11 @@ curl -s -X POST http://localhost:8000/pipeline/annotate \
 }
 ```
 
-The model received 39 amino acids — a fragment it has never seen — and recovered the correct molecular function, biological process, and cellular component with confidence 1.0. The top 3 neighbors are the three known oxygen carriers in the reference set (Hb β, Hb α, myoglobin), clustering together in embedding space exactly as the formal Gene Ontology would predict.
+The model received a 39-residue fragment it has never seen and recovered the correct molecular function, biological process, and cellular component. The top three neighbors are the three known oxygen carriers in the reference set (Hb β, Hb α, myoglobin), clustering together in embedding space exactly as the formal Gene Ontology would predict.
 
-### `GET /models` — service discovery
+**How `confidence` is computed:** each GO term's confidence is the normalized sum of the cosine similarities of the neighbors that carry it. A term carried by three high-similarity neighbors scores near 1.0; a term carried by one distant neighbor scores low. The number is a **deterministic aggregation over neighbor geometry** — no learned classifier, no fine-tuning, no hand-tuned thresholds. `confidence: 1.0` here means every retrieved neighbor carried "heme binding."
+
+**`GET /models`** — service discovery
 
 ```bash
 curl -s http://localhost:8000/models | python3 -m json.tool
@@ -142,17 +163,17 @@ curl -s http://localhost:8000/models | python3 -m json.tool
 
 ## API Reference
 
-| Method | Endpoint | Mode | Description |
-|--------|----------|------|-------------|
-| `GET` | `/health` | — | Server, model, and index status + active model name |
-| `GET` | `/models` | — | All available ESM2 variants, which is currently loaded |
-| `POST` | `/embed` | sync | Single sequence → 320-dim embedding vector |
-| `POST` | `/embed/batch` | sync | Up to 64 sequences → batch embeddings |
-| `POST` | `/search` | sync | Sequence → k nearest reference proteins with similarity scores |
-| `POST` | `/pipeline/annotate` | sync | Sequence → predicted GO terms + neighbors + inference time |
-| `POST` | `/jobs/embed` | async | Submit batch embed job → `job_id` (returns immediately) |
-| `POST` | `/jobs/annotate` | async | Submit annotate job → `job_id` (returns immediately) |
-| `GET` | `/jobs/{job_id}` | async | Poll job status; result included when `status: complete` |
+| Method | Endpoint             | Mode  | Description                                              |
+| ------ | -------------------- | ----- | ---------------------------------------------------------- |
+| GET    | `/health`            | —     | Server, model, and index status + active model name     |
+| GET    | `/models`            | —     | All available ESM2 variants; which is currently loaded  |
+| POST   | `/embed`             | sync  | Single sequence → 320-dim embedding vector              |
+| POST   | `/embed/batch`       | sync  | Up to 64 sequences → batch embeddings                   |
+| POST   | `/search`            | sync  | Sequence → k nearest reference proteins with similarity |
+| POST   | `/pipeline/annotate` | sync  | Sequence → predicted GO terms + neighbors + latency     |
+| POST   | `/jobs/embed`        | async | Submit batch embed job → job_id                         |
+| POST   | `/jobs/annotate`     | async | Submit annotate job → job_id                            |
+| GET    | `/jobs/{job_id}`     | async | Poll job status; result included when `status: complete`|
 
 Full interactive docs at `http://localhost:8000/docs` when the server is running.
 
@@ -160,56 +181,68 @@ Full interactive docs at `http://localhost:8000/docs` when the server is running
 
 ## Quickstart
 
-**Install dependencies**
 ```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-**Start the server**
-```bash
+# Start the server
 python3 -m uvicorn src.server:app --reload
 ```
 
-Startup takes ~10 seconds on first run: ESM2 downloads (~30MB), embeds 12 reference proteins, and builds the FAISS index. Subsequent starts use the cached model weights.
+Startup takes ~10s on first run: ESM2 downloads (~30MB), embeds the 12 reference proteins, and builds the FAISS index. Subsequent starts use cached model weights.
 
-**Open the UI**
+Navigate to `http://localhost:8000` — the annotation interface loads automatically. Use the example buttons to try hemoglobin, alpha-synuclein, ubiquitin, or insulin fragments, or paste any amino-acid sequence.
 
-Navigate to `http://localhost:8000` — the annotation interface loads automatically. Use the example buttons to try hemoglobin, alpha-synuclein, ubiquitin, or insulin fragments, or paste any amino acid sequence directly.
-
-**Run the test suite**
 ```bash
+# Run the test suite
 python3 -m pytest tests/ -v
 ```
-61 tests across model validation, pipeline logic, FAISS search, and HTTP integration. Completes in ~1.3 seconds.
+
+61 tests across model validation, pipeline logic, FAISS search, and HTTP integration. Completes in ~1.3s.
+
+---
+
+## Benchmarks
+
+Batch embedding throughput, ESM2-8M (`esm2_t6_8M_UR50D`), measured on Apple Silicon (M-series) CPU with `scripts/benchmark_batching.py`:
+
+| Batch size | Throughput (seq/s) | Speedup vs. batch=1 |
+| ---------- | ------------------- | -------------------- |
+| 1          | 180.6                | 1.00× (baseline)     |
+| 2          | 282.0                | 1.49×                |
+| 4          | 335.6                | 1.66×                |
+| 8          | 455.1                | 2.52×                |
+
+**Why batching helps:** a single-sequence forward pass pays fixed per-call overhead (Python dispatch, tokenizer call, kernel launch) regardless of how little compute the sequence needs. Packing sequences into one batched tensor amortizes that overhead across N sequences, so the Q/K/V projection matmuls in every attention layer run once over a wider batch dimension instead of N times over a batch dimension of 1 — the same batching principle that makes GPU matrix multiplication efficient applies directly to CPU BLAS here.
+
+These figures are CPU-only. On a CUDA GPU the same benchmark would show a substantially larger speedup (roughly 8–20× is typical for this workload) because GPUs have far more parallel compute that sits idle on small batches and is only saturated by larger ones — CPU BLAS scales more gradually. Reproduce with:
+
+```bash
+python3 -m scripts.benchmark_batching
+```
 
 ---
 
 ## Extracting Implicit Ontologies: How It Works
 
-### Why embeddings encode ontological structure
+**Why embeddings encode ontological structure.** ESM2 is trained with masked language modeling: mask random residues and predict them from context. To do this well the model must learn *why* certain amino acids appear in certain positions — which means learning the evolutionary constraints that placed them there. Those constraints *are* the ontology: proteins that share ancestry and function share sequence patterns, and the model represents that shared history as proximity in embedding space.
 
-ESM2 was trained with masked language modeling: randomly mask amino acids in a sequence and train the model to predict them from context. To do this well, the model must learn *why* certain amino acids appear in certain positions — which means learning the evolutionary constraints that placed them there.
+**What each layer captures:**
 
-Those evolutionary constraints are the ontology. Proteins that share a common ancestor and function share sequence patterns, and the model learns to represent that shared history as proximity in embedding space.
+| Layers | What's learned                                          |
+| ------ | -------------------------------------------------------- |
+| 1–2    | Local amino-acid chemistry — charge, polarity, size     |
+| 3–4    | Secondary structure — which residues form helices/sheets|
+| 5–6    | Long-range contacts and functional context              |
+| Final  | Highest-level functional/evolutionary representation    |
 
-### What each layer captures
+We extract the final layer and mean-pool across sequence positions, collapsing a variable-length sequence into a single fixed-size vector — the protein's coordinates in ESM2's learned space.
 
-| Layers | What's learned |
-|--------|----------------|
-| 1–2 | Local amino acid chemistry — charge, polarity, size |
-| 3–4 | Secondary structure — which residues form helices or sheets |
-| 5–6 | Long-range contacts and functional context |
-| Final (−1) | Highest-level functional/evolutionary representation |
+**From geometry to explicit annotations.** The pipeline runs three steps:
 
-We extract the final layer and mean-pool across sequence positions, collapsing variable-length sequences into a single fixed-size vector — the protein's coordinates in ESM2's learned ontological space.
-
-### From geometry to explicit annotations
-
-The pipeline endpoint runs three steps:
-
-1. **Embed** — ESM2 maps the query sequence to a point in 320-d space
-2. **Search** — FAISS finds the k nearest reference proteins by cosine similarity
-3. **Aggregate** — GO terms are weighted by neighbor similarity and ranked by confidence
+1. **Embed** — ESM2 maps the query to a point in 320-d space.
+2. **Search** — FAISS finds the k nearest reference proteins by cosine similarity.
+3. **Aggregate** — GO terms are weighted by neighbor similarity and ranked by confidence.
 
 A GO term shared by three high-similarity neighbors scores higher than one carried by a single distant neighbor. The result is a ranked list of predicted functions grounded entirely in learned geometry — no hand-crafted rules, no explicit ontology training.
 
@@ -217,11 +250,11 @@ A GO term shared by three high-similarity neighbors scores higher than one carri
 
 ## Connection to Compute Fundamentals
 
-Every attention layer in ESM2 is three batched matrix multiplications (`Q`, `K`, `V` projections) followed by the scaled dot-product `QK^T / sqrt(d)`. The batching, memory-tiling, and cache strategies that make matrix multiplication efficient on CPU and GPU are exactly what PyTorch applies here at every transformer layer, on every sequence, in every batch.
+Every attention layer in ESM2 is three batched matrix multiplications (Q, K, V projections) followed by the scaled dot-product `QKᵀ / √(d)`. The batching, memory-tiling, and cache strategies that make matrix multiplication efficient on CPU and GPU are exactly what PyTorch applies here, every layer, every sequence.
 
-At query time, the FAISS nearest-neighbor search is a dot product between the query vector and every reference vector — the same primitive. At 12 proteins this is trivial. At 570,000 (all of SwissProt), FAISS applies the same cache-aware geometric partitioning to keep it sub-millisecond.
+At query time, the FAISS nearest-neighbor search is a dot product between the query vector and every reference vector — the same primitive. At 12 proteins this is trivial. At 570,000 (all of SwissProt), a flat index no longer suffices and FAISS applies cache-aware geometric partitioning (IVF/HNSW) to keep it sub-millisecond.
 
-The async job pattern maps to GPU memory management: for large models (650M, 3B parameters) or large batches, you don't block on the result — you submit and poll, giving the server freedom to schedule work efficiently across concurrent requests.
+The async job pattern maps to GPU memory management: for large models (650M params) or large batches, you don't block on the result — you submit and poll, giving the server freedom to schedule work efficiently across concurrent requests.
 
 ---
 
@@ -230,22 +263,28 @@ The async job pattern maps to GPU memory management: for large models (650M, 3B 
 ```
 esm2_inference_service/
 ├── src/
-│   ├── model.py        # ESM2 load, tokenize, masked mean-pool forward pass
-│   ├── inference.py    # Batching engine, input validation, tensor → Python types
-│   ├── reference.py    # Reference database loader
-│   ├── search.py       # FAISS IndexFlatIP with cosine similarity
-│   ├── pipeline.py     # GO term aggregation weighted by similarity scores
-│   ├── jobs.py         # In-memory job store, async background task functions
-│   └── server.py       # FastAPI app, lifespan, all endpoints
+│   ├── model.py       # ESM2 load, tokenize, masked mean-pool forward pass
+│   ├── inference.py   # Batching engine, input validation, tensor → Python types
+│   ├── reference.py   # Reference database loader
+│   ├── search.py      # FAISS IndexFlatIP with cosine similarity
+│   ├── pipeline.py    # GO term aggregation weighted by similarity scores
+│   ├── jobs.py        # In-memory job store, async background task functions
+│   └── server.py      # FastAPI app, lifespan, all endpoints
+├── static/
+│   └── index.html     # Vanilla JS UI, served at GET /
 ├── data/
 │   └── reference_proteins.json   # 12 annotated reference proteins
+├── scripts/
+│   └── benchmark_batching.py     # Per-request vs. batched throughput benchmark
+├── docs/
+│   └── ui_screenshot.png
 ├── tests/
-│   ├── conftest.py         # Session-scoped TestClient fixture
-│   ├── test_model.py       # Input validation edge cases
-│   ├── test_pipeline.py    # GO aggregation logic and confidence math
-│   ├── test_search.py      # FAISS index correctness
-│   ├── test_server.py      # HTTP integration tests for all sync endpoints
-│   └── test_jobs.py        # Async job submission, polling, error handling
+│   ├── conftest.py       # Session-scoped TestClient fixture
+│   ├── test_model.py     # Input validation edge cases
+│   ├── test_pipeline.py  # GO aggregation logic + confidence math
+│   ├── test_search.py    # FAISS index correctness
+│   ├── test_server.py    # HTTP integration tests for all sync endpoints
+│   └── test_jobs.py      # Async job submission, polling, error handling
 └── requirements.txt
 ```
 
@@ -253,19 +292,19 @@ esm2_inference_service/
 
 ## Reference Proteins
 
-| Protein | UniProt | Function | Why it's here |
-|---------|---------|----------|---------------|
-| Ubiquitin | P0CG47 | Protein degradation tag | Universal regulatory protein, distinct embedding |
-| Cytochrome c | P99999 | Mitochondrial electron carrier | Heme protein — neighbor to oxygen carriers |
-| Hemoglobin α | P69905 | Oxygen transport | Cluster anchor for heme-binding proteins |
-| Hemoglobin β | P68871 | Oxygen transport (sickle cell: E6V) | Near-identical GO terms to Hb α, tests clustering |
-| Myoglobin | P02144 | Intracellular oxygen storage | Third heme protein — validates oxygen-carrier cluster |
-| Calmodulin-1 | P0DP23 | Calcium signaling sensor | EF-hand motif, structurally distinct family |
-| Alpha-synuclein | P37840 | Synaptic vesicle trafficking / Parkinson's | Disordered protein, no defined fold |
-| SOD1 | P00441 | Antioxidant enzyme / familial ALS | Metal-binding enzyme, disease relevance |
-| GFP | P42212 | Bioluminescent reporter | Non-human, unique beta-barrel fold |
-| Insulin | P01308 | Glucose homeostasis hormone | Small secreted protein, disulfide-rich |
-| Thioredoxin | P10599 | Redox regulation | Shares oxidoreductase function with cytochrome c |
-| PCNA | P12004 | DNA replication sliding clamp | Nuclear protein, ring-shaped homotrimer |
+| Protein         | UniProt | Function                          | Why it's here                              |
+| --------------- | ------- | ---------------------------------- | -------------------------------------------- |
+| Ubiquitin       | P0CG47  | Protein degradation tag           | Universal regulatory protein, distinct embedding |
+| Cytochrome c    | P99999  | Mitochondrial electron carrier    | Heme protein — neighbor to oxygen carriers |
+| Hemoglobin α    | P69905  | Oxygen transport                  | Cluster anchor for heme-binding proteins   |
+| Hemoglobin β    | P68871  | Oxygen transport (sickle cell: E6V) | Near-identical GO terms to Hb α, tests clustering |
+| Myoglobin       | P02144  | Intracellular oxygen storage      | Third heme protein — validates oxygen-carrier cluster |
+| Calmodulin-1    | P0DP23  | Calcium signaling sensor          | EF-hand motif, structurally distinct family |
+| Alpha-synuclein | P37840  | Synaptic vesicle trafficking / Parkinson's | Disordered protein, no defined fold |
+| SOD1            | P00441  | Antioxidant enzyme / familial ALS | Metal-binding enzyme, disease relevance    |
+| GFP             | P42212  | Bioluminescent reporter           | Non-human, unique beta-barrel fold         |
+| Insulin         | P01308  | Glucose homeostasis hormone       | Small secreted protein, disulfide-rich     |
+| Thioredoxin     | P10599  | Redox regulation                  | Shares oxidoreductase function with cytochrome c |
+| PCNA            | P12004  | DNA replication sliding clamp     | Nuclear protein, ring-shaped homotrimer    |
 
-Extending the reference set is one JSON record per protein — no code changes required. Scaling to all 570,000 reviewed proteins in SwissProt requires only a larger FAISS index.
+Extending the reference set is one JSON record per protein — no code changes required. Scaling to all ~570,000 reviewed proteins in SwissProt requires a larger, partitioned FAISS index (IVF/HNSW), not a rewrite.
